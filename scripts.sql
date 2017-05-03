@@ -1,4 +1,4 @@
--- Функция подготовки таблицы 
+-- Функция подготовки таблицы (скорее всего лишняя)
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `prepare_partition`(p_SCHEMANAME VARCHAR(32), p_TABLENAME VARCHAR(32), p_KEEP_DATA_DAYS INT, p_HOURLY_INTERVAL INT)
 BEGIN
@@ -172,19 +172,28 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- (Имя_БД)
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `partition_maintenance_all`(SCHEMA_NAME VARCHAR(32))
 BEGIN
-                CALL partition_maintenance(SCHEMA_NAME, 'history', 90, 24, 14);
-                CALL partition_maintenance(SCHEMA_NAME, 'history_log', 90, 24, 14);
-                CALL partition_maintenance(SCHEMA_NAME, 'history_str', 90, 24, 14);
-                CALL partition_maintenance(SCHEMA_NAME, 'history_text', 90, 24, 14);
-                CALL partition_maintenance(SCHEMA_NAME, 'history_uint', 90, 24, 14);
-                CALL partition_maintenance(SCHEMA_NAME, 'trends', 365, 24, 14);
-                CALL partition_maintenance(SCHEMA_NAME, 'trends_uint', 365, 24, 14);
-		UPDATE zabbix_partition_monitoring set time=CURRENT_TIMESTAMP WHERE id='1';
+	-- Время хранения 90 дней, разбивать по 24 часа, создавать новые партиции на 14 дней вперед
+	CALL partition_maintenance(SCHEMA_NAME, 'history', 90, 24, 14);
+	-- Время хранения 90 дней, разбивать по 24 часа, создавать новые партиции на 14 дней вперед
+	CALL partition_maintenance(SCHEMA_NAME, 'history_log', 90, 24, 14);
+	-- Время хранения 90 дней, разбивать по 24 часа, создавать новые партиции на 14 дней вперед
+	CALL partition_maintenance(SCHEMA_NAME, 'history_str', 90, 24, 14);
+	-- Время хранения 90 дней, разбивать по 24 часа, создавать новые партиции на 14 дней вперед
+	CALL partition_maintenance(SCHEMA_NAME, 'history_text', 90, 24, 14);
+	-- Время хранения 90 дней, разбивать по 24 часа, создавать новые партиции на 14 дней вперед
+	CALL partition_maintenance(SCHEMA_NAME, 'history_uint', 90, 24, 14);
+	-- Время хранения 365 дней, разбивать по 24 часа, создавать новые партиции на 14 дней вперед
+	CALL partition_maintenance(SCHEMA_NAME, 'trends', 365, 24, 14);
+	-- Время хранения 365 дней, разбивать по 24 часа, создавать новые партиции на 14 дней вперед
+	CALL partition_maintenance(SCHEMA_NAME, 'trends_uint', 365, 24, 14);
+	-- Для мониторинга записываем в таблицу текущее время, потом мониторим заббиксом время
+	UPDATE zabbix_partition_monitoring set time=CURRENT_TIMESTAMP WHERE id='1';
 END$$
 DELIMITER ;
 
-
+-- Создание планировщика
 CREATE DEFINER=`root`@`localhost` EVENT `zabbix_partition` ON SCHEDULE EVERY 1 DAY STARTS '2017-01-09 23:50:00' ON COMPLETION NOT PRESERVE ENABLE COMMENT 'zabbix partitioning' DO call partition_maintenance_all('zabbix')
