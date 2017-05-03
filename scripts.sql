@@ -1,17 +1,4 @@
-DELIMITER $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `table_prepare`(p_SCHEMANAME VARCHAR(32))
-BEGIN
-	CALL prepare_partition(p_SCHEMANAME, 'history', 90, 24);
-	CALL prepare_partition(p_SCHEMANAME, 'history_log', 90, 24);
-	CALL prepare_partition(p_SCHEMANAME, 'history_str', 90, 24);
-	CALL prepare_partition(p_SCHEMANAME, 'history_text', 90, 24);
-	CALL prepare_partition(p_SCHEMANAME, 'history_uint', 90, 24);
-	CALL prepare_partition(p_SCHEMANAME, 'trends', 365, 24);
-	CALL prepare_partition(p_SCHEMANAME, 'trends_uint', 365, 24);
-END$$
-DELIMITER ;
-
-
+-- Функция подготовки таблицы 
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `prepare_partition`(p_SCHEMANAME VARCHAR(32), p_TABLENAME VARCHAR(32), p_KEEP_DATA_DAYS INT, p_HOURLY_INTERVAL INT)
 BEGIN
@@ -92,6 +79,7 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- Процедура создания партиций для таблицы (Имя_БД, Имя_Таблицы, Имя_Партиции, Время)
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `partition_create`(SCHEMANAME VARCHAR(64), TABLENAME VARCHAR(64), PARTITIONNAME VARCHAR(64), CLOCK INT)
 BEGIN
