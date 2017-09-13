@@ -5,46 +5,49 @@ BEGIN
         DECLARE v_PARTITIONNAME VARCHAR(16);
         DECLARE v_LESS_THAN_TIMESTAMP INT;
         DECLARE v_CURTIME INT;
-		DECLARE v_KEEP_DATA_HOURS INT;
-		DECLARE v_RETROWS INT;
-		DECLARE v_CHECKTABLE INT;
+	DECLARE v_KEEP_DATA_HOURS INT;
+	DECLARE v_RETROWS INT;
+	DECLARE v_CHECKTABLE INT;
 
-		SELECT COUNT(1) INTO v_CHECKTABLE
-        FROM information_schema.partitions
-        WHERE table_schema = p_SCHEMANAME AND TABLE_NAME = p_TABLENAME AND partition_name IS NULL;
+	SELECT COUNT(1) INTO v_CHECKTABLE
+        	FROM information_schema.partitions
+        	WHERE table_schema = p_SCHEMANAME 
+		AND TABLE_NAME = p_TABLENAME 
+		AND partition_name IS NULL;
 
-		IF v_CHECKTABLE = 1 THEN
-			
-			SET v_KEEP_DATA_HOURS = p_KEEP_DATA_DAYS * 24 / p_HOURLY_INTERVAL;
-			SET v_CURTIME = UNIX_TIMESTAMP(DATE_FORMAT(NOW() + INTERVAL 1 DAY, '%Y-%m-%d 00:00:00'));
-
-			SET @__SQL = CONCAT("ALTER TABLE ", p_SCHEMANAME, ".", p_TABLENAME, " PARTITION BY RANGE(`clock`) (");
-
-			SET @_COMMA = "";
-			SET @__interval = v_KEEP_DATA_HOURS;
-			create_loop: LOOP
-                IF @__interval < 0 THEN
-					LEAVE create_loop;
-                END IF;
- 
-                SET v_LESS_THAN_TIMESTAMP = v_CURTIME - (p_HOURLY_INTERVAL * @__interval * 3600);
-                SET v_PARTITIONNAME = FROM_UNIXTIME(v_CURTIME - p_HOURLY_INTERVAL * (@__interval + 1) * 3600, 'p%Y%m%d%H00');
-                SET @__interval=@__interval-1;
-
-				SELECT COUNT(1) INTO v_RETROWS FROM information_schema.partitions WHERE table_schema = p_SCHEMANAME AND table_name = p_TABLENAME AND (partition_name = v_PARTITIONNAME OR partition_description = v_LESS_THAN_TIMESTAMP);
-				
-				IF v_RETROWS = 0 THEN
-
-					SET @__SQL = CONCAT( @__SQL, @_COMMA, 'PARTITION ', v_PARTITIONNAME, ' VALUES LESS THAN (', v_LESS_THAN_TIMESTAMP, ')' );
-					SET @_COMMA = ", ";
-				END IF;
-			END LOOP; 
+	IF v_CHECKTABLE = 1 THEN
 		
-			SET @__SQL = CONCAT(@__SQL, ");");
-			PREPARE STMT FROM @__SQL;
-			EXECUTE STMT;
-			DEALLOCATE PREPARE STMT;
-		END IF;
+		SET v_KEEP_DATA_HOURS = p_KEEP_DATA_DAYS * 24 / p_HOURLY_INTERVAL;
+		SET v_CURTIME = UNIX_TIMESTAMP(DATE_FORMAT(NOW() + INTERVAL 1 DAY, '%Y-%m-%d 00:00:00'));
+
+		SET @__SQL = CONCAT("ALTER TABLE ", p_SCHEMANAME, ".", p_TABLENAME, " PARTITION BY RANGE(`clock`) (");
+
+		SET @_COMMA = "";
+		SET @__interval = v_KEEP_DATA_HOURS;
+	
+		create_loop: LOOP
+                	IF @__interval < 0 THEN
+				LEAVE create_loop;
+                	END IF;
+ 
+                	SET v_LESS_THAN_TIMESTAMP = v_CURTIME - (p_HOURLY_INTERVAL * @__interval * 3600);
+                	SET v_PARTITIONNAME = FROM_UNIXTIME(v_CURTIME - p_HOURLY_INTERVAL * (@__interval + 1) * 3600, 'p%Y%m%d%H00');
+                	SET @__interval=@__interval-1;
+
+			SELECT COUNT(1) INTO v_RETROWS FROM information_schema.partitions WHERE table_schema = p_SCHEMANAME AND table_name = p_TABLENAME AND (partition_name = v_PARTITIONNAME OR partition_description = v_LESS_THAN_TIMESTAMP);
+				
+			IF v_RETROWS = 0 THEN
+
+				SET @__SQL = CONCAT( @__SQL, @_COMMA, 'PARTITION ', v_PARTITIONNAME, ' VALUES LESS THAN (', v_LESS_THAN_TIMESTAMP, ')' );
+				SET @_COMMA = ", ";
+			END IF;
+		END LOOP; 
+		
+		SET @__SQL = CONCAT(@__SQL, ");");
+		PREPARE STMT FROM @__SQL;
+		EXECUTE STMT;
+		DEALLOCATE PREPARE STMT;
+	END IF;
 END$$
 DELIMITER ;
 
@@ -52,17 +55,19 @@ DELIMITER ;
 DELIMITER $$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `partition_verify`(SCHEMANAME VARCHAR(64), TABLENAME VARCHAR(64), HOURLYINTERVAL INT(11))
 BEGIN
-        DECLARE PARTITION_NAME VARCHAR(16);
-        DECLARE RETROWS INT(11);
-        DECLARE FUTURE_TIMESTAMP TIMESTAMP;
+	DECLARE PARTITION_NAME VARCHAR(16);
+	DECLARE RETROWS INT(11);
+	DECLARE FUTURE_TIMESTAMP TIMESTAMP;
  
         
-        SELECT COUNT(1) INTO RETROWS
-        FROM information_schema.partitions
-        WHERE table_schema = SCHEMANAME AND TABLE_NAME = TABLENAME AND partition_name IS NULL;
+	SELECT COUNT(1) INTO RETROWS
+		FROM information_schema.partitions
+		WHERE table_schema = SCHEMANAME 
+		AND TABLE_NAME = TABLENAME 
+		AND partition_name IS NULL;
  
         
-        IF RETROWS = 1 THEN
+	IF RETROWS = 1 THEN
                 
                 SET FUTURE_TIMESTAMP = TIMESTAMPADD(HOUR, HOURLYINTERVAL, CONCAT(CURDATE(), " ", '00:00:00'));
                 SET PARTITION_NAME = DATE_FORMAT(CURDATE(), 'p%Y%m%d%H00');
